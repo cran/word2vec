@@ -8,7 +8,7 @@ word2vec(
   x,
   type = c("cbow", "skip-gram"),
   dim = 50,
-  window = 5L,
+  window = ifelse(type == "cbow", 5L, 10L),
   iter = 5L,
   lr = 0.05,
   hs = FALSE,
@@ -17,7 +17,8 @@ word2vec(
   min_count = 5L,
   split = c(" \\n,.-!?:;/\\"#$\%&'()*+<=>@[]\\\\^_`{|}~\\t\\v\\f\\r", ".\\n?!"),
   stopwords = character(),
-  threads = 1L
+  threads = 1L,
+  ...
 )
 }
 \arguments{
@@ -46,6 +47,8 @@ word2vec(
 \item{stopwords}{a character vector of stopwords to exclude from training}
 
 \item{threads}{number of CPU threads to use. Defaults to 1.}
+
+\item{...}{further arguments passed on to the C++ function \code{w2v_train} - for expert use only}
 }
 \value{
 an object of class \code{w2v_trained} which is a list with elements 
@@ -60,6 +63,16 @@ an object of class \code{w2v_trained} which is a list with elements
 }
 \description{
 Construct a word2vec model on text. The algorithm is explained at \url{https://arxiv.org/pdf/1310.4546.pdf}
+}
+\details{
+Some advice on the optimal set of parameters to use for training as defined by Mikolov et al.
+\itemize{
+\item{argument type: skip-gram (slower, better for infrequent words) vs cbow (fast)}
+\item{argument hs: the training algorithm: hierarchical softmax (better for infrequent words) vs negative sampling (better for frequent words, better with low dimensional vectors)}
+\item{argument dim: dimensionality of the word vectors: usually more is better, but not always}
+\item{argument window: for skip-gram usually around 10, for cbow around 5}
+\item{argument sample: sub-sampling of frequent words: can improve both accuracy and speed for large data sets (useful values are in range 0.001 to 0.00001)}
+}
 }
 \examples{
 library(udpipe)
@@ -80,6 +93,18 @@ nn
 ## Get vocabulary
 vocab <- summary(model, type = "vocabulary")
 
+# Do some calculations with the vectors and find similar terms to these
+emb <- as.matrix(model)
+vector <- emb["buurt", ] - emb["rustige", ] + emb["restaurants", ]
+predict(model, vector, type = "nearest", top_n = 10)
+
+vector <- emb["gastvrouw", ] - emb["gastvrij", ]
+predict(model, vector, type = "nearest", top_n = 5)
+
+vectors <- emb[c("gastheer", "gastvrouw"), ]
+vectors <- rbind(vectors, avg = colMeans(vectors))
+predict(model, vectors, type = "nearest", top_n = 10)
+
 ## Save the model to hard disk
 path <- "mymodel.bin"
 \dontshow{
@@ -91,7 +116,33 @@ model <- read.word2vec(path)
 \dontshow{
 file.remove(path)
 }
+
+
+## 
+## Example getting word embeddings 
+##   which are different depending on the parts of speech tag
+## Look to the help of the udpipe R package 
+##   to get parts of speech tags on text
+## 
+library(udpipe)
+data(brussels_reviews_anno, package = "udpipe")
+x <- subset(brussels_reviews_anno, language == "fr")
+x <- subset(x, grepl(xpos, pattern = paste(LETTERS, collapse = "|")))
+x$text <- sprintf("\%s/\%s", x$lemma, x$xpos)
+x <- subset(x, !is.na(lemma))
+x <- paste.data.frame(x, term = "text", group = "doc_id", collapse = " ")
+x <- x$text
+
+model <- word2vec(x = x, dim = 15, iter = 20, split = c(" ", ".\n?!"))
+emb   <- as.matrix(model)
+nn    <- predict(model, c("cuisine/NN", "rencontrer/VB"), type = "nearest")
+nn
+nn    <- predict(model, c("accueillir/VBN", "accueillir/VBG"), type = "nearest")
+nn
 }
 \references{
-\url{https://github.com/maxoodf/word2vec}
+\url{https://github.com/maxoodf/word2vec}, \url{https://arxiv.org/pdf/1310.4546.pdf}
+}
+\seealso{
+\code{\link{predict.word2vec}}, \code{\link{as.matrix.word2vec}}
 }

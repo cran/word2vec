@@ -4,10 +4,12 @@
 \alias{read.word2vec}
 \title{Read a binary word2vec model from disk}
 \usage{
-read.word2vec(file)
+read.word2vec(file, normalize = FALSE)
 }
 \arguments{
 \item{file}{the path to the model file}
+
+\item{normalize}{logical indicating to normalize the embeddings by dividing by the factor (sqrt(sum(x . x) / length(x))). Defaults to FALSE.}
 }
 \value{
 an object of class w2v which is a list with elements
@@ -29,4 +31,12 @@ emb <- predict(model, c("bus", "naar", "unknownword"), type = "embedding")
 emb
 nn  <- predict(model, c("bus", "toilet"), type = "nearest")
 nn
+
+# Do some calculations with the vectors and find similar terms to these
+emb <- as.matrix(model)
+vector <- emb["gastvrouw", ] - emb["gastvrij", ]
+predict(model, vector, type = "nearest", top_n = 5)
+vectors <- emb[c("gastheer", "gastvrouw"), ]
+vectors <- rbind(vectors, avg = colMeans(vectors))
+predict(model, vectors, type = "nearest", top_n = 10)
 }

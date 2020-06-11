@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include "word2vec.hpp"
+#include "wordReader.hpp"
 #include <unordered_map>
 
 // [[Rcpp::depends(RcppProgress)]]
@@ -24,7 +25,8 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
                      bool withSG = false,
                      std::string wordDelimiterChars = " \n,.-!?:;/\"#$%&'()*+<=>@[]\\^_`{|}~\t\v\f\r",
                      std::string endOfSentenceChars = ".\n?!",
-                     bool verbose = false) {
+                     bool verbose = false,
+                     bool normalize = true) {
   
   
   /*
@@ -128,6 +130,15 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
     Rcpp::Rcout << "Training failed: " << model->errMsg() << std::endl;
     success = false;
   }
+  // NORMALISE UPFRONT - DIFFERENT THAN ORIGINAL CODE 
+  // - original code dumps data to disk, next imports it and during import normalisation happens after which we can do nearest calculations
+  // - the R wrapper only writes to disk at request so we need to normalise upfront in order to do directly nearest calculations
+  if(normalize){
+    //Rcpp::Rcout << "Finished training: finalising with embedding normalisation" << std::endl;
+    model->normalize();
+  }
+  
+  // Return model + model information
   Rcpp::List out = Rcpp::List::create(
     Rcpp::Named("model") = model,
     Rcpp::Named("data") = Rcpp::List::create(
@@ -155,15 +166,15 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
       Rcpp::Named("split_sents") = endOfSentenceChars
     )
   );
-  out.attr("class") = "w2v_trained";
+  out.attr("class") = "word2vec_trained";
   return out;
 }
 
 
 // [[Rcpp::export]]
-Rcpp::List w2v_load_model(std::string file) {
+Rcpp::List w2v_load_model(std::string file, bool normalize = true) {
   Rcpp::XPtr<w2v::w2vModel_t> model(new w2v::w2vModel_t(), true);
-  if (!model->load(file)) {
+  if (!model->load(file, normalize = normalize)) {
     Rcpp::stop(model->errMsg());
   }
   Rcpp::List out = Rcpp::List::create(
@@ -172,7 +183,7 @@ Rcpp::List w2v_load_model(std::string file) {
     Rcpp::Named("dim") = model->vectorSize(),
     Rcpp::Named("vocabulary") = model->modelSize()
   );
-  out.attr("class") = "w2v";
+  out.attr("class") = "word2vec";
   return out;
 }
 
@@ -246,60 +257,143 @@ Rcpp::DataFrame w2v_nearest(SEXP ptr,
     Rcpp::Named("term1") = x,
     Rcpp::Named("term2") = keys,
     Rcpp::Named("similarity") = distance,
-    Rcpp::Named("rank") = rank
+    Rcpp::Named("rank") = rank,
+    Rcpp::Named("stringsAsFactors") = false
   );
   return out;
 }
-
-
 
 
 // [[Rcpp::export]]
-Rcpp::List w2v_analogy(SEXP ptr, 
-                       Rcpp::StringVector x, 
-                       std::size_t n = 10,
-                       float min_distance = 0.0) {
-  Rcpp::List out;
+Rcpp::List w2v_nearest_vector(SEXP ptr, 
+                              const std::vector<float> &x, 
+                              std::size_t top_n = 10,
+                              float min_distance = 0.0) {
   Rcpp::XPtr<w2v::w2vModel_t> model(ptr);
+  w2v::vector_t *vec = new w2v::vector_t(x);
+  
   std::vector<std::pair<std::string, float>> nearest;
-  
-  std::string word1, word2, word3;
-  
-  try {
-  word1 = Rcpp::as<std::string>(x[0]);
-  word2 = Rcpp::as<std::string>(x[1]);
-  word3 = Rcpp::as<std::string>(x[2]);
-  //w2v::word2vec_t vec1(model, &word1);
-  //w2v::word2vec_t vec2(model, &word2);
-  //w2v::word2vec_t vec3(model, &word3);
-
-  w2v::vector_t vec1 = *(model->vector(word1));
-  w2v::vector_t vec2 = *(model->vector(word2));
-  w2v::vector_t vec3 = *(model->vector(word3));
-  w2v::vector_t vec = vec2 - vec1 + vec3;
-  //w2v::vector_t result = king - man + woman;
-  
-  model->nearest(vec, nearest, n, min_distance);
+  model->nearest(*vec, nearest, top_n, min_distance);
   
   std::vector<std::string> keys;
   std::vector<float> distance;
+  std::vector<int> rank;
+  int r = 0;
   for(auto kv : nearest) {
     keys.push_back(kv.first);
     distance.push_back(kv.second);
+    r = r + 1;
+    rank.push_back(r);
   } 
-  out = Rcpp::List::create(
+  Rcpp::DataFrame out = Rcpp::DataFrame::create(
     Rcpp::Named("term") = keys,
-    Rcpp::Named("distance") = distance
+    Rcpp::Named("similarity") = distance,
+    Rcpp::Named("rank") = rank,
+    Rcpp::Named("stringsAsFactors") = false
   );
-  } catch (const std::exception &_e) {
-    Rcpp::stop(_e.what());
-  } catch (...) {
-    Rcpp::stop("unknown error");
-  }
   return out;
 }
 
+// [[Rcpp::export]]
+Rcpp::NumericMatrix w2v_read_binary(const std::string modelFile, bool normalize, std::size_t n) {
+  try {
+    const std::string wrongFormatErrMsg = "model: wrong model file format";
+    
+    // map model file, exception will be thrown on empty file
+    w2v::fileMapper_t input(modelFile);
+    
+    // parse header
+    off_t offset = 0;
+    // get words number
+    std::string nwStr;
+    char ch = 0;
+    while ((ch = (*(input.data() + offset))) != ' ') {
+      nwStr += ch;
+      if (++offset >= input.size()) {
+        throw std::runtime_error(wrongFormatErrMsg);
+      }
+    }
+    
+    // get vector size
+    offset++; // skip ' ' char
+    std::string vsStr;
+    while ((ch = (*(input.data() + offset))) != '\n') {
+      vsStr += ch;
+      if (++offset >= input.size()) {
+        throw std::runtime_error(wrongFormatErrMsg);
+      }
+    }
+    
+    std::size_t m_mapSize;
+    uint16_t m_vectorSize;
+    try {
+      m_mapSize = static_cast<std::size_t>(std::stoll(nwStr));
+      m_vectorSize = static_cast<uint16_t>(std::stoi(vsStr));
+    } catch (...) {
+      throw std::runtime_error(wrongFormatErrMsg);
+    }
+    if(m_mapSize > n){
+      m_mapSize = n;
+    }
+    Rcpp::NumericMatrix embedding(m_mapSize, m_vectorSize);
+    Rcpp::StringVector embedding_words(m_mapSize);
+    //std::fill(embedding.begin(), embedding.end(), Rcpp::NumericVector::get_na());
+    
+    // get pairs of word and vector
+    offset++; // skip last '\n' char
+    std::string word;
+    for (std::size_t i = 0; i < m_mapSize; ++i) {
+      // get word
+      word.clear();
+      while ((ch = (*(input.data() + offset))) != ' ') {
+        if (ch != '\n') {
+          word += ch;
+        }
+        // move to the next char and check boundaries
+        if (++offset >= input.size()) {
+          throw std::runtime_error(wrongFormatErrMsg);
+        }
+      }
+      embedding_words[i] = word;
+      
+      // skip last ' ' char and check boundaries
+      if (static_cast<off_t>(++offset + m_vectorSize * sizeof(float)) > input.size()) {
+        throw std::runtime_error(wrongFormatErrMsg);
+      }
+      
+      // get word's vector
+      std::vector<float> v(m_vectorSize);
+      std::memcpy(v.data(), input.data() + offset, m_vectorSize * sizeof(float));
+      offset += m_vectorSize * sizeof(float); // vector size
+      
+      if(normalize){
+        // normalize vector
+        float med = 0.0f;
+        for (auto const &j:v) {
+          med += j * j;
+        }
+        if (med <= 0.0f) {
+          throw std::runtime_error("failed to normalize vectors");
+        }
+        med = std::sqrt(med / v.size());
+        for (auto &j:v) {
+          j /= med;
+        }
+      }
+      for(unsigned int j = 0; j < v.size(); j++){
+        //embedding(i, j) = (float)((*v)[j]);
+        embedding(i, j) = v[j];
+      }
+      
+    }
+    rownames(embedding) = embedding_words;
+    return embedding;
+  } catch (const std::exception &_e) {
+    std::string m_errMsg = _e.what();
+  } catch (...) {
+    std::string m_errMsg = "model: unknown error";
+  }
+  Rcpp::NumericMatrix embedding_default;
+  return embedding_default;
+}
 
-  
-  
-  

@@ -153,8 +153,8 @@ namespace w2v {
         /// pure virtual method to save model of a derived class
         virtual bool save(const std::string &_modelFile) const noexcept = 0;
         /// pure virtual method to load model of a derived class
-        virtual bool load(const std::string &_modelFile) noexcept = 0;
-
+        virtual bool load(const std::string &_modelFile, bool normalize = true) noexcept = 0;
+        
         /**
          * Vector access by key value
          * @param _key key value uniquely identifying vector in model
@@ -280,7 +280,27 @@ namespace w2v {
         /// saves word vectors to file with _modelFile name
         bool save(const std::string &_modelFile) const noexcept override;
         /// loads word vectors from file with _modelFile name
-        bool load(const std::string &_modelFile) noexcept override;
+        bool load(const std::string &_modelFile, bool normalize = true) noexcept override;
+        /**
+         * Normalise vectors
+         */
+        inline void normalize() {
+            for(auto &kv : m_map) {
+                // normalize vector
+                auto &v = kv.second;
+                float med = 0.0f;
+                for (auto const &j:v) {
+                    med += j * j;
+                }
+                if (med <= 0.0f) {
+                    throw std::runtime_error("failed to normalize vectors");
+                }
+                med = std::sqrt(med / v.size());
+                for (auto &j:v) {
+                    j /= med;
+                }
+            } 
+        }
     };
 
     /**
@@ -316,7 +336,7 @@ namespace w2v {
         /// saves document vectors to file with _modelFile name
         bool save(const std::string &_modelFile) const noexcept override;
         /// loads document vectors from file with _modelFile name
-        bool load(const std::string &_modelFile) noexcept override;
+        bool load(const std::string &_modelFile, bool normalize = true) noexcept override;
     };
 
     /**

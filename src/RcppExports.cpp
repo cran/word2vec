@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // w2v_train
-Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string stopWordsFile, uint16_t minWordFreq, uint16_t size, uint8_t window, uint16_t expTableSize, uint8_t expValueMax, float sample, bool withHS, uint8_t negative, uint8_t threads, uint8_t iterations, float alpha, bool withSG, std::string wordDelimiterChars, std::string endOfSentenceChars, bool verbose);
-RcppExport SEXP _word2vec_w2v_train(SEXP trainFileSEXP, SEXP modelFileSEXP, SEXP stopWordsFileSEXP, SEXP minWordFreqSEXP, SEXP sizeSEXP, SEXP windowSEXP, SEXP expTableSizeSEXP, SEXP expValueMaxSEXP, SEXP sampleSEXP, SEXP withHSSEXP, SEXP negativeSEXP, SEXP threadsSEXP, SEXP iterationsSEXP, SEXP alphaSEXP, SEXP withSGSEXP, SEXP wordDelimiterCharsSEXP, SEXP endOfSentenceCharsSEXP, SEXP verboseSEXP) {
+Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string stopWordsFile, uint16_t minWordFreq, uint16_t size, uint8_t window, uint16_t expTableSize, uint8_t expValueMax, float sample, bool withHS, uint8_t negative, uint8_t threads, uint8_t iterations, float alpha, bool withSG, std::string wordDelimiterChars, std::string endOfSentenceChars, bool verbose, bool normalize);
+RcppExport SEXP _word2vec_w2v_train(SEXP trainFileSEXP, SEXP modelFileSEXP, SEXP stopWordsFileSEXP, SEXP minWordFreqSEXP, SEXP sizeSEXP, SEXP windowSEXP, SEXP expTableSizeSEXP, SEXP expValueMaxSEXP, SEXP sampleSEXP, SEXP withHSSEXP, SEXP negativeSEXP, SEXP threadsSEXP, SEXP iterationsSEXP, SEXP alphaSEXP, SEXP withSGSEXP, SEXP wordDelimiterCharsSEXP, SEXP endOfSentenceCharsSEXP, SEXP verboseSEXP, SEXP normalizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,18 +29,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type wordDelimiterChars(wordDelimiterCharsSEXP);
     Rcpp::traits::input_parameter< std::string >::type endOfSentenceChars(endOfSentenceCharsSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(w2v_train(trainFile, modelFile, stopWordsFile, minWordFreq, size, window, expTableSize, expValueMax, sample, withHS, negative, threads, iterations, alpha, withSG, wordDelimiterChars, endOfSentenceChars, verbose));
+    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(w2v_train(trainFile, modelFile, stopWordsFile, minWordFreq, size, window, expTableSize, expValueMax, sample, withHS, negative, threads, iterations, alpha, withSG, wordDelimiterChars, endOfSentenceChars, verbose, normalize));
     return rcpp_result_gen;
 END_RCPP
 }
 // w2v_load_model
-Rcpp::List w2v_load_model(std::string file);
-RcppExport SEXP _word2vec_w2v_load_model(SEXP fileSEXP) {
+Rcpp::List w2v_load_model(std::string file, bool normalize);
+RcppExport SEXP _word2vec_w2v_load_model(SEXP fileSEXP, SEXP normalizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type file(fileSEXP);
-    rcpp_result_gen = Rcpp::wrap(w2v_load_model(file));
+    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(w2v_load_model(file, normalize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -93,29 +95,43 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// w2v_analogy
-Rcpp::List w2v_analogy(SEXP ptr, Rcpp::StringVector x, std::size_t n, float min_distance);
-RcppExport SEXP _word2vec_w2v_analogy(SEXP ptrSEXP, SEXP xSEXP, SEXP nSEXP, SEXP min_distanceSEXP) {
+// w2v_nearest_vector
+Rcpp::List w2v_nearest_vector(SEXP ptr, const std::vector<float>& x, std::size_t top_n, float min_distance);
+RcppExport SEXP _word2vec_w2v_nearest_vector(SEXP ptrSEXP, SEXP xSEXP, SEXP top_nSEXP, SEXP min_distanceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type ptr(ptrSEXP);
-    Rcpp::traits::input_parameter< Rcpp::StringVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< std::size_t >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const std::vector<float>& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type top_n(top_nSEXP);
     Rcpp::traits::input_parameter< float >::type min_distance(min_distanceSEXP);
-    rcpp_result_gen = Rcpp::wrap(w2v_analogy(ptr, x, n, min_distance));
+    rcpp_result_gen = Rcpp::wrap(w2v_nearest_vector(ptr, x, top_n, min_distance));
+    return rcpp_result_gen;
+END_RCPP
+}
+// w2v_read_binary
+Rcpp::NumericMatrix w2v_read_binary(const std::string modelFile, bool normalize, std::size_t n);
+RcppExport SEXP _word2vec_w2v_read_binary(SEXP modelFileSEXP, SEXP normalizeSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type modelFile(modelFileSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(w2v_read_binary(modelFile, normalize, n));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_word2vec_w2v_train", (DL_FUNC) &_word2vec_w2v_train, 18},
-    {"_word2vec_w2v_load_model", (DL_FUNC) &_word2vec_w2v_load_model, 1},
+    {"_word2vec_w2v_train", (DL_FUNC) &_word2vec_w2v_train, 19},
+    {"_word2vec_w2v_load_model", (DL_FUNC) &_word2vec_w2v_load_model, 2},
     {"_word2vec_w2v_save_model", (DL_FUNC) &_word2vec_w2v_save_model, 2},
     {"_word2vec_w2v_dictionary", (DL_FUNC) &_word2vec_w2v_dictionary, 1},
     {"_word2vec_w2v_embedding", (DL_FUNC) &_word2vec_w2v_embedding, 2},
     {"_word2vec_w2v_nearest", (DL_FUNC) &_word2vec_w2v_nearest, 4},
-    {"_word2vec_w2v_analogy", (DL_FUNC) &_word2vec_w2v_analogy, 4},
+    {"_word2vec_w2v_nearest_vector", (DL_FUNC) &_word2vec_w2v_nearest_vector, 4},
+    {"_word2vec_w2v_read_binary", (DL_FUNC) &_word2vec_w2v_read_binary, 3},
     {NULL, NULL, 0}
 };
 
