@@ -1,7 +1,7 @@
 Package: word2vec
 Type: Package
 Title: Distributed Representations of Words
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(
     person('Jan', 'Wijffels', role = c('aut', 'cre', 'cph'), email = 'jwijffels@bnosac.be', comment = "R wrapper"), 
     person('BNOSAC', role = 'cph', comment = "R wrapper"),
@@ -19,9 +19,9 @@ Imports: Rcpp (>= 0.11.5)
 LinkingTo: Rcpp, RcppProgress
 Suggests: udpipe
 NeedsCompilation: yes
-Packaged: 2020-06-11 08:17:37 UTC; Jan
+Packaged: 2020-06-12 07:12:44 UTC; Jan
 Author: Jan Wijffels [aut, cre, cph] (R wrapper),
   BNOSAC [cph] (R wrapper),
   Max Fomichev [ctb, cph] (Code in src/word2vec)
 Repository: CRAN
-Date/Publication: 2020-06-11 10:00:03 UTC
+Date/Publication: 2020-06-12 09:10:02 UTC

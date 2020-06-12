@@ -1,6 +1,6 @@
-5ef53db2f2c7d68fad1bcad8575a9d95 *DESCRIPTION
+675e786d303c87139e4da753adb28ae7 *DESCRIPTION
 3d10ee8db2439370b6662de45cd63bc6 *NAMESPACE
-8e9b0ed28f304e3f2fd0192663c5259b *NEWS.md
+4d2f0eab574598a55265082e713d368a *NEWS.md
 e96bc57d88313b152b56f2c17f672827 *R/RcppExports.R
 f3597d46faba5e84d8d0a5fefc69d1d5 *R/pkg.R
 ed9ebdea0b7613281f17a787ae22ed6f *R/word2vec.R
@@ -17,7 +17,7 @@ f9c04d217ebdfeaf50af3ed01be4690e *man/read.wordvectors.Rd
 ea508f082fdfbf79e95e1c099ab47a51 *src/Makevars
 d51794f58fd838946b03a9e2f964001a *src/Makevars.win
 caeeed97b5fcad890213da455b03c4b5 *src/RcppExports.cpp
-bae060063b8703bb7773814637731bbe *src/rcpp_word2vec.cpp
+221b73268b7f190e693f8f7f76d5799d *src/rcpp_word2vec.cpp
 826e138b028c7ffcb853daa401b2ab74 *src/word2vec/CMakeLists.txt
 873c47479125bd89163d70379ba2a335 *src/word2vec/README.md
 f86e2734c07b716a38c5e889606d002d *src/word2vec/examples/doc2vec/CMakeLists.txt
