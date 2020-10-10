@@ -18,6 +18,7 @@ word2vec(
   split = c(" \\n,.-!?:;/\\"#$\%&'()*+<=>@[]\\\\^_`{|}~\\t\\v\\f\\r", ".\\n?!"),
   stopwords = character(),
   threads = 1L,
+  encoding = "UTF-8",
   ...
 )
 }
@@ -48,6 +49,10 @@ word2vec(
 
 \item{threads}{number of CPU threads to use. Defaults to 1.}
 
+\item{encoding}{the encoding of \code{x} and \code{stopwords}. Defaults to 'UTF-8'. 
+Calculating the model always starts from files allowing to build a model on large corpora. The encoding argument 
+is passed on to \code{file} when writing \code{x} to hard disk in case you provided it as a character vector.}
+
 \item{...}{further arguments passed on to the C++ function \code{w2v_train} - for expert use only}
 }
 \value{
@@ -75,6 +80,7 @@ Some advice on the optimal set of parameters to use for training as defined by M
 }
 }
 \examples{
+\dontshow{if(require(udpipe))\{}
 library(udpipe)
 ## Take data and standardise it a bit
 data(brussels_reviews, package = "udpipe")
@@ -139,6 +145,8 @@ nn    <- predict(model, c("cuisine/NN", "rencontrer/VB"), type = "nearest")
 nn
 nn    <- predict(model, c("accueillir/VBN", "accueillir/VBG"), type = "nearest")
 nn
+
+\dontshow{\} # End of main if statement running only if the required packages are installed}
 }
 \references{
 \url{https://github.com/maxoodf/word2vec}, \url{https://arxiv.org/pdf/1310.4546.pdf}
