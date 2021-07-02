@@ -1,11 +1,11 @@
-ef9a39a48dc30c850faab3c5997a842f *DESCRIPTION
+adfccfcc698663656362a0fa1d69b1f0 *DESCRIPTION
 9f7382463518fadbfde2b92bddf80e84 *NAMESPACE
-4dbb993f85c13ce618520797bc81eced *NEWS.md
+06562413c76645869c276f663d5953c0 *NEWS.md
 94a38c0cedeab4d78e2fcb7de74efabf *R/RcppExports.R
 b5a227e07b79069521619429be798dc3 *R/doc2vec.R
 bcc78cdb942a20af0a27595f2823c582 *R/pkg.R
 9f91c2b572048c1612ec030845999bd7 *R/utils.R
-8805dc95df2fab16319d4e45a3a7531d *R/word2vec.R
+89b9b9ced1ce44e7562fef5eb9a94ebd *R/word2vec.R
 d9fc80fd92caaf3ce5e5808a4dd0ac7a *README.md
 4beb7c4ec5a10034ceb2fb8ca64a21e5 *inst/models/example.bin
 42890b7aa8122c9ebff90646842eebee *inst/models/example.txt
@@ -16,7 +16,7 @@ d69a7a49ea0ff6601e66e5e0fbc6571c *man/predict.word2vec.Rd
 f9c04d217ebdfeaf50af3ed01be4690e *man/read.wordvectors.Rd
 5542080a0ef9635d0c566bdfffd7b897 *man/txt_clean_word2vec.Rd
 6ef05f2722dbe3e0775cdb8ffd242ed3 *man/word2vec.Rd
-9d900c3f5273a43c68afb6dd2687c646 *man/word2vec_similarity.Rd
+278769d7a1e5588369d70d4993b6bad7 *man/word2vec_similarity.Rd
 f6c8de5de0264a9ee201c88c29466d8b *man/write.word2vec.Rd
 ea508f082fdfbf79e95e1c099ab47a51 *src/Makevars
 d51794f58fd838946b03a9e2f964001a *src/Makevars.win

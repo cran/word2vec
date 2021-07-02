@@ -1,7 +1,7 @@
 Package: word2vec
 Type: Package
 Title: Distributed Representations of Words
-Version: 0.3.3
+Version: 0.3.4
 Authors@R: c(
     person('Jan', 'Wijffels', role = c('aut', 'cre', 'cph'), email = 'jwijffels@bnosac.be', comment = "R wrapper"), 
     person('BNOSAC', role = 'cph', comment = "R wrapper"),
@@ -12,16 +12,15 @@ Description: Learn vector representations of words by continuous bag of words an
 URL: https://github.com/bnosac/word2vec
 License: Apache License (>= 2.0)
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.1.1
 Depends: R (>= 2.10)
 Imports: Rcpp (>= 0.11.5), stats
 LinkingTo: Rcpp, RcppProgress
 Suggests: udpipe
 NeedsCompilation: yes
-Packaged: 2020-11-26 20:34:29 UTC; Jan
+Packaged: 2021-07-02 09:09:12 UTC; Jan
 Author: Jan Wijffels [aut, cre, cph] (R wrapper),
   BNOSAC [cph] (R wrapper),
   Max Fomichev [ctb, cph] (Code in src/word2vec)
 Repository: CRAN
-Date/Publication: 2020-11-26 21:40:02 UTC
+Date/Publication: 2021-07-02 09:40:02 UTC
