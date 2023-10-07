@@ -13,14 +13,20 @@
 
 namespace w2v {
     bool w2vModel_t::train(const trainSettings_t &_trainSettings,
-                           const std::string &_trainFile,
-                           const std::string &_stopWordsFile,
+                           const corpus_t &_corpus,
+                           const std::string &_trainFile, // NOTE: remove
+                           const std::string &_stopWordsFile, // NOTE: remove
                            vocabularyProgressCallback_t _vocabularyProgressCallback,
                            vocabularyStatsCallback_t _vocabularyStatsCallback,
                            trainProgressCallback_t _trainProgressCallback) noexcept {
         try {
+            // store tokens
+            std::shared_ptr<corpus_t> corpus(new corpus_t(_corpus));
             // map train data set file to memory
-            std::shared_ptr<fileMapper_t> trainWordsMapper(new fileMapper_t(_trainFile));
+            std::shared_ptr<fileMapper_t> trainWordsMapper;
+            if (!_trainFile.empty()) {
+                trainWordsMapper.reset(new fileMapper_t(_trainFile));
+            }
             // map stop-words file to memory
             std::shared_ptr<fileMapper_t> stopWordsMapper;
             if (!_stopWordsFile.empty()) {
@@ -28,13 +34,22 @@ namespace w2v {
             }
 
             // build vocabulary, skip stop-words and words with frequency < minWordFreq
-            std::shared_ptr<vocabulary_t> vocabulary(new vocabulary_t(trainWordsMapper,
-                                                                      stopWordsMapper,
-                                                                      _trainSettings.wordDelimiterChars,
-                                                                      _trainSettings.endOfSentenceChars,
-                                                                      _trainSettings.minWordFreq,
-                                                                      _vocabularyProgressCallback,
-                                                                      _vocabularyStatsCallback));
+            std::shared_ptr<vocabulary_t> vocabulary;
+            if (!_trainFile.empty()) {
+                vocabulary.reset(new vocabulary_t(trainWordsMapper,
+                                                  stopWordsMapper,
+                                                  _trainSettings.wordDelimiterChars,
+                                                  _trainSettings.endOfSentenceChars,
+                                                  _trainSettings.minWordFreq,
+                                                  _vocabularyProgressCallback,
+                                                  _vocabularyStatsCallback));
+            } else {
+                vocabulary.reset(new vocabulary_t(corpus,
+                                                  _trainSettings.minWordFreq,
+                                                  _vocabularyProgressCallback,
+                                                  _vocabularyStatsCallback));
+            }
+            
             // key words descending ordered by their indexes
             std::vector<std::string> words;
             vocabulary->words(words);
@@ -45,9 +60,11 @@ namespace w2v {
             std::vector<float> _trainMatrix;
             trainer_t(std::make_shared<trainSettings_t>(_trainSettings),
                       vocabulary,
-                      trainWordsMapper,
+                      corpus,
+                      trainWordsMapper, // NOTE: remove
                       _trainProgressCallback)(_trainMatrix);
-
+            //Rcpp::Rcout << "_trainMatrix: " << _trainMatrix.size() << "\n";
+            
             std::size_t wordIndex = 0;
             for (auto const &i:words) {
                 auto &v = m_map[i];

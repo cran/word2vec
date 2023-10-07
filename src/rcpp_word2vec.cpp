@@ -10,7 +10,11 @@
 
 // [[Rcpp::depends(RcppProgress)]]
 // [[Rcpp::export]]
-Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string stopWordsFile, 
+Rcpp::List w2v_train(Rcpp::List texts_, 
+                     Rcpp::CharacterVector stopWords_, 
+                     std::string trainFile, // NOTE: remove
+                     std::string modelFile, 
+                     std::string stopWordsFile, // NOTE: remove
                      uint16_t minWordFreq = 5,
                      uint16_t size = 100,
                      uint8_t window = 5,
@@ -45,6 +49,11 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
    std::string wordDelimiterChars = " \n,.-!?:;/\"#$%&'()*+<=>@[]\\^_`{|}~\t\v\f\r";
    std::string endOfSentenceChars = ".\n?!";
    */
+  
+  texts_t texts = Rcpp::as<texts_t>(texts_);
+  words_t stopWords = Rcpp::as<words_t>(stopWords_);
+  w2v::corpus_t corpus(texts, stopWords);
+    
   w2v::trainSettings_t trainSettings;
   trainSettings.minWordFreq = minWordFreq;
   trainSettings.size = size;
@@ -68,7 +77,8 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
   std::size_t totalWords;
   if (verbose) {
     Progress p(100, true);
-    trained = model->train(trainSettings, trainFile, stopWordsFile,
+    trained = model->train(trainSettings, corpus, 
+                           trainFile, stopWordsFile, // NOTE: remove
                            [&p] (float _percent) {
                              p.update(_percent/2);
                              /*
@@ -107,7 +117,8 @@ Rcpp::List w2v_train(std::string trainFile, std::string modelFile, std::string s
     );
     //std::cout << std::endl;
   } else {
-    trained = model->train(trainSettings, trainFile, stopWordsFile, 
+    trained = model->train(trainSettings, corpus, 
+                           trainFile, stopWordsFile, // NOTE: remove
                            nullptr, 
                            [&vocWords, &trainWords, &totalWords] (std::size_t _vocWords, std::size_t _trainWords, std::size_t _totalWords) {
                              /*

@@ -41,7 +41,8 @@ namespace w2v {
         */
         trainer_t(const std::shared_ptr<trainSettings_t> &_trainSettings,
                   const std::shared_ptr<vocabulary_t> &_vocabulary,
-                  const std::shared_ptr<fileMapper_t> &_fileMapper,
+                  const std::shared_ptr<corpus_t> &_corpus,
+                  const std::shared_ptr<fileMapper_t> &_fileMapper, // NOTE: remove
                   std::function<void(float, float)> _progressCallback);
 
         /**

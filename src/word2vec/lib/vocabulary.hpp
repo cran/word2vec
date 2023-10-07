@@ -69,6 +69,11 @@ namespace w2v {
                      uint16_t _minFreq,
                      w2vModel_t::vocabularyProgressCallback_t _progressCallback,
                      w2vModel_t::vocabularyStatsCallback_t _statsCallback) noexcept;
+        
+        vocabulary_t(std::shared_ptr<corpus_t> &_corpus,
+                     uint16_t _minFreq,
+                     w2vModel_t::vocabularyProgressCallback_t _progressCallback,
+                     w2vModel_t::vocabularyStatsCallback_t _statsCallback) noexcept;
 
         /**
          * Requests a data (index, frequency, word) associated with the _word

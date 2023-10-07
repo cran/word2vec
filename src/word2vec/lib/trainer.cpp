@@ -12,7 +12,8 @@
 namespace w2v {
     trainer_t::trainer_t(const std::shared_ptr<trainSettings_t> &_trainSettings,
                          const std::shared_ptr<vocabulary_t> &_vocabulary,
-                         const std::shared_ptr<fileMapper_t> &_fileMapper,
+                         const std::shared_ptr<corpus_t> &_corpus,
+                         const std::shared_ptr<fileMapper_t> &_fileMapper, // NOTE: remove
                          std::function<void(float, float)> _progressCallback): m_threads() {
         trainThread_t::sharedData_t sharedData;
 
@@ -26,11 +27,12 @@ namespace w2v {
         }
         sharedData.vocabulary = _vocabulary;
 
-        if (!_fileMapper) {
-            throw std::runtime_error("file mapper object is not initialized");
+        if (!_corpus && !_fileMapper) {
+            throw std::runtime_error("corpus and file mapper objects are not initialized");
         }
+        sharedData.corpus = _corpus;
         sharedData.fileMapper = _fileMapper;
-
+        
         sharedData.bpWeights.reset(new std::vector<float>(_trainSettings->size * _vocabulary->size(), 0.0f));
         sharedData.expTable.reset(new std::vector<float>(_trainSettings->expTableSize));
         for (uint16_t i = 0; i < _trainSettings->expTableSize; ++i) {
@@ -41,7 +43,7 @@ namespace w2v {
             // Precompute f(x) = x / (x + 1)
             (*sharedData.expTable)[i] = (*sharedData.expTable)[i] / ((*sharedData.expTable)[i] + 1.0f);
         }
-
+        
         if (_trainSettings->withHS) {
             std::vector<std::size_t> frequencies;
             _vocabulary->frequencies(frequencies);
@@ -54,12 +56,22 @@ namespace w2v {
 
         sharedData.processedWords.reset(new std::atomic<std::size_t>(0));
         sharedData.alpha.reset(new std::atomic<float>(_trainSettings->alpha));
-
-        m_matrixSize = sharedData.trainSettings->size * sharedData.vocabulary->size();
-
+        
+        // if (_corpus) {
+        //     // NOTE : corpus has no sentence delimiter
+        //     m_matrixSize = sharedData.trainSettings->size * sharedData.vocabulary->size() + 100;
+        // } else {
+            m_matrixSize = sharedData.trainSettings->size * sharedData.vocabulary->size();
+        //}
+        //Rcpp::Rcout << "corpus->texts.size(): " << sharedData.corpus->texts.size() << "\n";
+        //Rcpp::Rcout << "vocabulary->size(): " << sharedData.vocabulary->size() << "\n";
+        //Rcpp::Rcout << "_trainSettings->threads: " << (int)_trainSettings->threads << "\n";
         for (uint8_t i = 0; i < _trainSettings->threads; ++i) {
+            // trainThread_t t(i, sharedData);
+            // Rcpp::Rcout << "thread: " << (int)i << " from " << t.range.first << " to " << t.range.second << "\n"; 
             m_threads.emplace_back(new trainThread_t(i, sharedData));
         }
+        //throw std::runtime_error("m_threads.emplace_back()");
     }
 
     void trainer_t::operator()(std::vector<float> &_trainMatrix) noexcept {

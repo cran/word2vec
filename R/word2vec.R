@@ -1,6 +1,6 @@
 #' @title Train a word2vec model on text
 #' @description Construct a word2vec model on text. The algorithm is explained at \url{https://arxiv.org/pdf/1310.4546.pdf}
-#' @param x a character vector with text or the path to the file on disk containing training data
+#' @param x a character vector with text or the path to the file on disk containing training data or a list of tokens. See the examples.
 #' @param type the type of algorithm to use, either 'cbow' or 'skip-gram'. Defaults to 'cbow'
 #' @param dim dimension of the word vectors. Defaults to 50.
 #' @param iter number of training iterations. Defaults to 5.
@@ -10,13 +10,9 @@
 #' @param negative integer with the number of negative samples. Only used in case hs is set to FALSE
 #' @param sample threshold for occurrence of words. Defaults to 0.001
 #' @param min_count integer indicating the number of time a word should occur to be considered as part of the training vocabulary. Defaults to 5.
-#' @param split a character vector of length 2 where the first element indicates how to split words and the second element indicates how to split sentences in \code{x}
 #' @param stopwords a character vector of stopwords to exclude from training 
 #' @param threads number of CPU threads to use. Defaults to 1.
-#' @param encoding the encoding of \code{x} and \code{stopwords}. Defaults to 'UTF-8'. 
-#' Calculating the model always starts from files allowing to build a model on large corpora. The encoding argument 
-#' is passed on to \code{file} when writing \code{x} to hard disk in case you provided it as a character vector. 
-#' @param ... further arguments passed on to the C++ function \code{w2v_train} - for expert use only
+#' @param ... further arguments passed on to the methods \code{\link{word2vec.character}}, \code{\link{word2vec.list}} as well as the C++ function \code{w2v_train} - for expert use only
 #' @return an object of class \code{w2v_trained} which is a list with elements 
 #' \itemize{
 #' \item{model: a Rcpp pointer to the model}
@@ -36,7 +32,13 @@
 #' \item{argument window: for skip-gram usually around 10, for cbow around 5}
 #' \item{argument sample: sub-sampling of frequent words: can improve both accuracy and speed for large data sets (useful values are in range 0.001 to 0.00001)}
 #' }
-#' @seealso \code{\link{predict.word2vec}}, \code{\link{as.matrix.word2vec}}
+#' @note
+#' Some notes on the tokenisation
+#' \itemize{
+#' \item{If you provide to \code{x} a list, each list element should correspond to a sentence (or what you consider as a sentence) and should contain a character vector of tokens. The word2vec model is then executed using \code{\link{word2vec.list}}}
+#' \item{If you provide to \code{x} a character vector or the path to the file on disk, the tokenisation into words depends on the first element provided in \code{split} and the tokenisation into sentences depends on the second element provided in \code{split} when passed on to \code{\link{word2vec.character}}}
+#' }
+#' @seealso \code{\link{predict.word2vec}}, \code{\link{as.matrix.word2vec}}, \code{\link{word2vec}}, \code{\link{word2vec.character}}, \code{\link{word2vec.list}}
 #' @export
 #' @examples
 #' \dontshow{if(require(udpipe))\{}
@@ -50,20 +52,20 @@
 #' model <- word2vec(x = x, dim = 15, iter = 20)
 #' emb   <- as.matrix(model)
 #' head(emb)
-#' emb <- predict(model, c("bus", "toilet", "unknownword"), type = "embedding")
+#' emb   <- predict(model, c("bus", "toilet", "unknownword"), type = "embedding")
 #' emb
-#' nn  <- predict(model, c("bus", "toilet"), type = "nearest", top_n = 5)
+#' nn    <- predict(model, c("bus", "toilet"), type = "nearest", top_n = 5)
 #' nn
 #' 
 #' ## Get vocabulary
-#' vocab <- summary(model, type = "vocabulary")
+#' vocab   <- summary(model, type = "vocabulary")
 #' 
 #' # Do some calculations with the vectors and find similar terms to these
-#' emb <- as.matrix(model)
-#' vector <- emb["buurt", ] - emb["rustige", ] + emb["restaurants", ]
+#' emb     <- as.matrix(model)
+#' vector  <- emb["buurt", ] - emb["rustige", ] + emb["restaurants", ]
 #' predict(model, vector, type = "nearest", top_n = 10)
 #' 
-#' vector <- emb["gastvrouw", ] - emb["gastvrij", ]
+#' vector  <- emb["gastvrouw", ] - emb["gastvrij", ]
 #' predict(model, vector, type = "nearest", top_n = 5)
 #' 
 #' vectors <- emb[c("gastheer", "gastvrouw"), ]
@@ -81,7 +83,16 @@
 #' \dontshow{
 #' file.remove(path)
 #' }
-#' 
+#' ## 
+#' ## Example of word2vec with a list of tokens 
+#' ## 
+#' toks  <- strsplit(x, split = "[[:space:][:punct:]]+")
+#' model <- word2vec(x = toks, dim = 15, iter = 20)
+#' emb   <- as.matrix(model)
+#' emb   <- predict(model, c("bus", "toilet", "unknownword"), type = "embedding")
+#' emb
+#' nn    <- predict(model, c("bus", "toilet"), type = "nearest", top_n = 5)
+#' nn
 #' 
 #' ## 
 #' ## Example getting word embeddings 
@@ -95,10 +106,9 @@
 #' x <- subset(x, grepl(xpos, pattern = paste(LETTERS, collapse = "|")))
 #' x$text <- sprintf("%s/%s", x$lemma, x$xpos)
 #' x <- subset(x, !is.na(lemma))
-#' x <- paste.data.frame(x, term = "text", group = "doc_id", collapse = " ")
-#' x <- x$text
+#' x <- split(x$text, list(x$doc_id, x$sentence_id))
 #' 
-#' model <- word2vec(x = x, dim = 15, iter = 20, split = c(" ", ".\n?!"))
+#' model <- word2vec(x = x, dim = 15, iter = 20)
 #' emb   <- as.matrix(model)
 #' nn    <- predict(model, c("cuisine/NN", "rencontrer/VB"), type = "nearest")
 #' nn
@@ -106,16 +116,34 @@
 #' nn
 #' 
 #' \dontshow{\} # End of main if statement running only if the required packages are installed}
-word2vec <- function(x,
+word2vec <- function(x, 
                      type = c("cbow", "skip-gram"),
                      dim = 50, window = ifelse(type == "cbow", 5L, 10L), 
                      iter = 5L, lr = 0.05, hs = FALSE, negative = 5L, sample = 0.001, min_count = 5L, 
-                     split = c(" \n,.-!?:;/\"#$%&'()*+<=>@[]\\^_`{|}~\t\v\f\r", 
-                               ".\n?!"),
                      stopwords = character(),
                      threads = 1L,
-                     encoding = "UTF-8",
-                     ...){
+                     ...) {
+    UseMethod("word2vec")
+}
+
+#' @inherit word2vec title description params details seealso return references examples
+#' @param split a character vector of length 2 where the first element indicates how to split words and the second element indicates how to split sentences in \code{x}
+#' @param encoding the encoding of \code{x} and \code{stopwords}. Defaults to 'UTF-8'. 
+#' Calculating the model always starts from files allowing to build a model on large corpora. The encoding argument 
+#' is passed on to \code{file} when writing \code{x} to hard disk in case you provided it as a character vector. 
+#' @param useBytes logical passed on to \code{\link{writeLines}} when writing the text and stopwords on disk before building the model. Defaults to \code{TRUE}.
+#' @export
+word2vec.character <- function(x,
+                               type = c("cbow", "skip-gram"),
+                               dim = 50, window = ifelse(type == "cbow", 5L, 10L), 
+                               iter = 5L, lr = 0.05, hs = FALSE, negative = 5L, sample = 0.001, min_count = 5L, 
+                               stopwords = character(),
+                               threads = 1L,
+                               split = c(" \n,.-!?:;/\"#$%&'()*+<=>@[]\\^_`{|}~\t\v\f\r", 
+                                         ".\n?!"),
+                               encoding = "UTF-8",
+                               useBytes = TRUE,
+                               ...){
     type <- match.arg(type)
     stopw <- stopwords
     model <- file.path(tempdir(), "w2v.bin")
@@ -124,7 +152,7 @@ word2vec <- function(x,
     }
     file_stopwords <- tempfile()
     filehandle_stopwords <- file(file_stopwords, open = "wt", encoding = encoding)
-    writeLines(stopw, con = filehandle_stopwords)
+    writeLines(stopw, con = filehandle_stopwords, useBytes = useBytes)
     close(filehandle_stopwords)
     on.exit({
         if (file.exists(file_stopwords)) file.remove(file_stopwords)
@@ -138,7 +166,7 @@ word2vec <- function(x,
             if (file.exists(file_train)) file.remove(file_train)
         })
         filehandle_train <- file(file_train, open = "wt", encoding = encoding)
-        writeLines(text = x, con = filehandle_train)  
+        writeLines(text = x, con = filehandle_train, useBytes = useBytes)  
         close(filehandle_train)
     }
     #expTableSize <- 1000L
@@ -157,11 +185,79 @@ word2vec <- function(x,
     lr <- as.numeric(lr)
     skipgram <- as.logical(type %in% "skip-gram")
     split <- as.character(split)
-    model <- w2v_train(trainFile = file_train, modelFile = model, stopWordsFile = file_stopwords,
+    model <- w2v_train(list(), character(), 
+                       trainFile = file_train, modelFile = model, stopWordsFile = file_stopwords,
                        minWordFreq = min_count,
                        size = dim, window = window, #expTableSize = expTableSize, expValueMax = expValueMax, 
                        sample = sample, withHS = hs, negative = negative, threads = threads, iterations = iter,
                        alpha = lr, withSG = skipgram, wordDelimiterChars = split[1], endOfSentenceChars = split[2], ...)
+    model$data$stopwords <- stopwords
+    model
+}
+
+#' @inherit word2vec title description params details seealso return references
+#' @export
+#' @examples 
+#' \dontshow{if(require(udpipe))\{}
+#' library(udpipe)
+#' data(brussels_reviews, package = "udpipe")
+#' x     <- subset(brussels_reviews, language == "nl")
+#' x     <- tolower(x$feedback)
+#' toks  <- strsplit(x, split = "[[:space:][:punct:]]+")
+#' model <- word2vec(x = toks, dim = 15, iter = 20)
+#' emb   <- as.matrix(model)
+#' head(emb)
+#' emb   <- predict(model, c("bus", "toilet", "unknownword"), type = "embedding")
+#' emb
+#' nn    <- predict(model, c("bus", "toilet"), type = "nearest", top_n = 5)
+#' nn
+#' 
+#' ## 
+#' ## Example of word2vec with a list of tokens
+#' ## which gives the same embeddings as with a similarly tokenised character vector of texts 
+#' ## 
+#' txt   <- txt_clean_word2vec(x, ascii = TRUE, alpha = TRUE, tolower = TRUE, trim = TRUE)
+#' table(unlist(strsplit(txt, "")))
+#' toks  <- strsplit(txt, split = " ")
+#' set.seed(1234)
+#' modela <- word2vec(x = toks, dim = 15, iter = 20)
+#' set.seed(1234)
+#' modelb <- word2vec(x = txt, dim = 15, iter = 20, split = c(" \n\r", "\n\r"))
+#' all.equal(as.matrix(modela), as.matrix(modelb))
+#' \dontshow{\} # End of main if statement running only if the required packages are installed}
+word2vec.list <- function(x,
+                          type = c("cbow", "skip-gram"),
+                          dim = 50, window = ifelse(type == "cbow", 5L, 10L), 
+                          iter = 5L, lr = 0.05, hs = FALSE, negative = 5L, sample = 0.001, min_count = 5L, 
+                          stopwords = character(),
+                          threads = 1L,
+                          ...){
+    x <- lapply(x, as.character)
+    type <- match.arg(type)
+    stopwords <- as.character(stopwords)
+    model <- file.path(tempdir(), "w2v.bin")
+    #expTableSize <- 1000L
+    #expValueMax <- 6L
+    #expTableSize <- as.integer(expTableSize)
+    #expValueMax <- as.integer(expValueMax)
+    min_count <- as.integer(min_count)
+    dim <- as.integer(dim)
+    window <- as.integer(window)
+    iter <- as.integer(iter)
+    sample <- as.numeric(sample)
+    hs <- as.logical(hs)
+    negative <- as.integer(negative)
+    threads <- as.integer(threads)
+    iter <- as.integer(iter)
+    lr <- as.numeric(lr)
+    skipgram <- as.logical(type %in% "skip-gram")
+    encoding <- "UTF-8"
+    model <- w2v_train(x, stopwords,
+                       trainFile = "", modelFile = model, stopWordsFile = "",
+                       minWordFreq = min_count,
+                       size = dim, window = window, #expTableSize = expTableSize, expValueMax = expValueMax, 
+                       sample = sample, withHS = hs, negative = negative, threads = threads, iterations = iter,
+                       alpha = lr, withSG = skipgram, wordDelimiterChars = "", endOfSentenceChars = "", ...)
     model$data$stopwords <- stopwords
     model
 }

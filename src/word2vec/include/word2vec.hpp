@@ -19,7 +19,26 @@
 #include <cmath>
 #include <stdexcept>
 
+typedef std::vector<std::string> words_t;
+typedef std::vector<std::string> text_t;
+typedef std::vector<text_t> texts_t;
+
 namespace w2v {
+    
+    /**
+     * @brief corpus stores tokens and stopwords     
+     */    
+    class corpus_t final {
+    public:
+        texts_t texts;
+        words_t stopWords;
+        
+        // Constructors
+        corpus_t(): texts() {}
+        corpus_t(texts_t _texts, words_t _stopWords): texts(_texts), stopWords(_stopWords) {}
+        
+    };
+    
     /**
      * @brief trainSettings structure holds all training parameters
      */
@@ -271,8 +290,9 @@ namespace w2v {
          * @returns true on successful completion or false otherwise
         */
         bool train(const trainSettings_t &_trainSettings,
-                   const std::string &_trainFile,
-                   const std::string &_stopWordsFile,
+                   const corpus_t &_corpus,
+                   const std::string &_trainFile, // NOTE: remove
+                   const std::string &_stopWordsFile, // NOTE: remove
                    vocabularyProgressCallback_t _vocabularyProgressCallback,
                    vocabularyStatsCallback_t _vocabularyStatsCallback,
                    trainProgressCallback_t _trainProgressCallback) noexcept;
