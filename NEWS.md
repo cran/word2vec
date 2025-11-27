@@ -1,3 +1,8 @@
+## CHANGES IN word2vec VERSION 0.4.1
+
+- documentation changes in word2vec_similarity regarding the use of braces
+- fix note about arXiv DOI in DESCRIPTION
+
 ## CHANGES IN word2vec VERSION 0.4.0
 
 - Drop C++11 specification in Makevars
